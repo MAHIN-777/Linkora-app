@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linkora - Social Media</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <!-- Loading Screen -->
+    <div id="loading" class="fixed inset-0 bg-blue-600 flex items-center justify-center z-50">
+        <div class="text-center text-white">
+            <div class="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <h1 class="text-4xl font-bold">Linkora</h1>
+            <p class="mt-2">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Auth Section -->
+    <div id="authSection" class="min-h-screen hidden">
+        <div class="max-w-md mx-auto p-6">
+            <!-- Login Form -->
+            <div id="loginForm" class="bg-white rounded-2xl shadow-lg p-8">
+                <div class="text-center mb-8">
+                    <div class="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-white text-2xl font-bold">L</span>
+                    </div>
+                    <h1 class="text-3xl font-bold text-gray-800">Linkora</h1>
+                    <p class="text-gray-600 mt-2">Login to your account</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="loginEmail" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="your@email.com">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="loginPassword" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="••••••••">
+                    </div>
+                    
+                    <button onclick="login()" class="w-full bg-blue-500 text-white p-3 rounded-lg font-semibold hover:bg-blue-600">
+                        Login
+                    </button>
+                </div>
+
+                <p class="text-center mt-4 text-gray-600">
+                    Don't have account? 
+                    <button onclick="showRegister()" class="text-blue-500 font-semibold">Register</button>
+                </p>
+            </div>
+
+            <!-- Register Form -->
+            <div id="registerForm" class="bg-white rounded-2xl shadow-lg p-8 hidden">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-gray-800">Create Account</h2>
+                    <p class="text-gray-600">Join Linkora today</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                        <input type="text" id="regName" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="John Doe">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="regEmail" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="your@email.com">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <input type="text" id="regUsername" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="@username">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="regPassword" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="••••••••">
+                    </div>
+                    
+                    <button onclick="register()" class="w-full bg-green-500 text-white p-3 rounded-lg font-semibold hover:bg-green-600">
+                        Create Account
+                    </button>
+                </div>
+
+                <p class="text-center mt-4 text-gray-600">
+                    Already have account? 
+                    <button onclick="showLogin()" class="text-blue-500 font-semibold">Login</button>
+                </p>
+            </div>
+
+            <!-- Verification Form -->
+            <div id="verifyForm" class="bg-white rounded-2xl shadow-lg p-8 hidden">
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-envelope text-green-600 text-2xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-800">Verify Email</h2>
+                    <p class="text-gray-600">Enter verification code sent to <span id="verifyEmailText" class="font-semibold"></span></p>
+                </div>
+
+                <div class="space-y-4">
+                    <input type="text" id="verificationCode" class="w-full p-3 border border-gray-300 rounded-lg text-center text-2xl font-mono" placeholder="000000" maxlength="6">
+                    <button onclick="verifyEmail()" class="w-full bg-blue-500 text-white p-3 rounded-lg font-semibold hover:bg-blue-600">
+                        Verify & Continue
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="hidden">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b sticky top-0 z-40">
+            <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                        <span class="text-white font-bold">L</span>
+                    </div>
+                    <h1 class="text-xl font-bold text-gray-800">Linkora</h1>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <span id="welcomeText" class="text-gray-600"></span>
+                    <button onclick="showSection('feed')" class="p-2 text-gray-600 hover:text-blue-500">
+                        <i class="fas fa-home"></i>
+                    </button>
+                    <button onclick="showSection('profile')" class="p-2 text-gray-600 hover:text-blue-500">
+                        <i class="fas fa-user"></i>
+                    </button>
+                    <button id="adminBtn" onclick="showSection('admin')" class="p-2 text-gray-600 hover:text-red-500 hidden">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <button onclick="logout()" class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="max-w-4xl mx-auto p-4">
+            <!-- News Feed -->
+            <div id="feedSection">
+                <!-- Create Post -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <img id="userAvatarImg" src="" class="w-12 h-12 rounded-full bg-gray-300">
+                        <input type="text" id="postContent" placeholder="What's on your mind?" class="flex-1 p-3 bg-gray-100 rounded-full border-none">
+                    </div>
+                    <button onclick="createPost()" class="w-full bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600">
+                        Post
+                    </button>
+                </div>
+
+                <!-- Posts Feed -->
+                <div id="postsContainer">
+                    <!-- Posts will appear here -->
+                </div>
+            </div>
+
+            <!-- Profile Section -->
+            <div id="profileSection" class="hidden">
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="text-center mb-6">
+                        <img id="profileAvatar" src="" class="w-24 h-24 rounded-full mx-auto mb-4 bg-gray-300">
+                        <h2 id="profileName" class="text-2xl font-bold"></h2>
+                        <div class="flex items-center justify-center space-x-2 mt-2">
+                            <span id="profileUsername" class="text-gray-600"></span>
+                            <span id="verifiedBadge" class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full hidden">Verified</span>
+                        </div>
+                    </div>
+
+                    <!-- Avatar Upload -->
+                    <div class="border-t pt-6">
+                        <h3 class="font-semibold mb-4">Update Avatar</h3>
+                        <input type="file" id="avatarUpload" accept="image/*" class="mb-4">
+                        <button onclick="uploadAvatar()" class="bg-blue-500 text-white px-4 py-2 rounded-lg">Upload Avatar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Panel -->
+            <div id="adminSection" class="hidden">
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h2 class="text-2xl font-bold mb-6">Admin Panel</h2>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="p-3 text-left">Name</th>
+                                    <th class="p-3 text-left">Email</th>
+                                    <th class="p-3 text-left">Username</th>
+                                    <th class="p-3 text-left">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTable">
+                                <!-- Users will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let currentUser = null;
+        let pendingVerification = null;
+
+        // Initialize
+        window.onload = function() {
+            setTimeout(() => {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('authSection').classList.remove('hidden');
+                showLogin();
+            }, 2000);
+        };
+
+        // Show login form
+        function showLogin() {
+            document.getElementById('registerForm').classList.add('hidden');
+            document.getElementById('verifyForm').classList.add('hidden');
+            document.getElementById('loginForm').classList.remove('hidden');
+        }
+
+        // Show register form
+        function showRegister() {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('verifyForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.remove('hidden');
+        }
+
+        // Show verification form
+        function showVerification(email) {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.add('hidden');
+            document.getElementById('verifyForm').classList.remove('hidden');
+            document.getElementById('verifyEmailText').textContent = email;
+        }
+
+        // Connect to server
+        function connectToServer() {
+            socket = io();
+
+            socket.on('connect', () => {
+                console.log('Connected to server');
+            });
+
+            socket.on('verification_sent', (data) => {
+                alert(`Verification code sent to ${data.email}: ${data.code}`);
+                showVerification(data.email);
+                pendingVerification = data;
+            });
+
+            socket.on('verification_success', (user) => {
+                alert('Account created successfully!');
+                currentUser = user;
+                startApp();
+            });
+
+            socket.on('verification_error', (error) => {
+                alert('Error: ' + error);
+            });
+
+            socket.on('login_success', (user) => {
+                currentUser = user;
+                startApp();
+            });
+
+            socket.on('login_error', (error) => {
+                alert('Error: ' + error);
+            });
+
+            socket.on('register_error', (error) => {
+                alert('Error: ' + error);
+            });
+
+            socket.on('new_post', (post) => {
+                addPostToFeed(post);
+            });
+
+            socket.on('post_updated', (post) => {
+                updatePost(post);
+            });
+        }
+
+        // Register user
+        function register() {
+            const name = document.getElementById('regName').value;
+            const email = document.getElementById('regEmail').value;
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
+
+            if (!name || !email || !username || !password) {
+                alert('Please fill all fields');
+                return;
+            }
+
+            if (!socket) connectToServer();
+            
+            socket.emit('register', {
+                name,
+                email,
+                username,
+                password
+            });
+        }
+
+        // Verify email
+        function verifyEmail() {
+            const code = document.getElementById('verificationCode').value;
+            if (!code || code.length !== 6) {
+                alert('Please enter 6-digit code');
+                return;
+            }
+
+            socket.emit('verify_email', {
+                email: pendingVerification.email,
+                code: code
+            });
+        }
+
+        // Login user
+        function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                alert('Please enter email and password');
+                return;
+            }
+
+            if (!socket) connectToServer();
+            
+            socket.emit('login', { email, password });
+        }
+
+        // Start application
+        function startApp() {
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            
+            updateUI();
+            loadSamplePosts();
+
+            // Show admin button if user is admin
+            if (currentUser.isAdmin) {
+                document.getElementById('adminBtn').classList.remove('hidden');
+            }
+        }
+
+        // Update UI
+        function updateUI() {
+            document.getElementById('welcomeText').textContent = `Welcome, ${currentUser.name}!`;
+            document.getElementById('profileName').textContent = currentUser.name;
+            document.getElementById('profileUsername').textContent = currentUser.username;
+            
+            if (currentUser.isVerified) {
+                document.getElementById('verifiedBadge').classList.remove('hidden');
+            }
+        }
+
+        // Show sections
+        function showSection(section) {
+            document.getElementById('feedSection').classList.add('hidden');
+            document.getElementById('profileSection').classList.add('hidden');
+            document.getElementById('adminSection').classList.add('hidden');
+            document.getElementById(section + 'Section').classList.remove('hidden');
+
+            if (section === 'admin') {
+                loadAdminData();
+            }
+        }
+
+        // Create post
+        function createPost() {
+            const content = document.getElementById('postContent').value.trim();
+            if (!content) return;
+
+            const post = {
+                content: content,
+                author: currentUser.name,
+                authorId: currentUser.id,
+                authorUsername: currentUser.username,
+                authorAvatar: currentUser.avatar
+            };
+
+            socket.emit('create_post', post);
+            document.getElementById('postContent').value = '';
+        }
+
+        // Add post to feed
+        function addPostToFeed(post) {
+            const container = document.getElementById('postsContainer');
+            const isLiked = post.likes.some(like => like.userId === currentUser.id);
+
+            const postElement = document.createElement('div');
+            postElement.className = 'bg-white rounded-xl shadow-sm p-6 mb-4';
+            postElement.innerHTML = `
+                <div class="flex items-center space-x-3 mb-4">
+                    <img src="${post.authorAvatar || ''}" class="w-10 h-10 rounded-full bg-gray-300">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h3 class="font-semibold">${post.author}</h3>
+                            <span class="text-gray-500">${post.authorUsername}</span>
+                        </div>
+                        <p class="text-sm text-gray-500">${new Date(post.timestamp).toLocaleString()}</p>
+                    </div>
+                </div>
+                
+                <p class="text-gray-800 mb-4">${post.content}</p>
+                
+                <div class="flex space-x-4 text-gray-500 border-t pt-4">
+                    <button onclick="likePost('${post.id}')" class="flex items-center space-x-2 ${isLiked ? 'text-blue-500' : 'text-gray-500'}">
+                        <i class="fas fa-thumbs-up"></i>
+                        <span>Like (${post.likes.length})</span>
+                    </button>
+                    <button onclick="focusComment('${post.id}')" class="flex items-center space-x-2 text-gray-500">
+                        <i class="fas fa-comment"></i>
+                        <span>Comment (${post.comments.length})</span>
+                    </button>
+                </div>
+                
+                <div class="mt-4 hidden" id="commentSection-${post.id}">
+                    <div class="flex space-x-2 mb-2">
+                        <input type="text" id="commentInput-${post.id}" placeholder="Write a comment..." class="flex-1 p-2 border rounded-lg">
+                        <button onclick="addComment('${post.id}')" class="bg-blue-500 text-white px-4 py-2 rounded-lg">Post</button>
+                    </div>
+                    <div id="comments-${post.id}">
+                        ${post.comments.map(comment => `
+                            <div class="bg-gray-100 rounded-lg p-3 mb-2">
+                                <div class="flex justify-between items-start mb-1">
+                                    <span class="font-semibold text-sm">${comment.author}</span>
+                                    <span class="text-xs text-gray-500">${new Date(comment.timestamp).toLocaleTimeString()}</span>
+                                </div>
+                                <p class="text-gray-700 text-sm">${comment.content}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            container.insertBefore(postElement, container.firstChild);
+        }
+
+        // Like post
+        function likePost(postId) {
+            socket.emit('like_post', {
+                postId: postId,
+                userId: currentUser.id,
+                username: currentUser.name
+            });
+        }
+
+        // Add comment
+        function addComment(postId) {
+            const commentInput = document.getElementById('commentInput-' + postId);
+            const content = commentInput.value.trim();
+            if (!content) return;
+
+            socket.emit('add_comment', {
+                postId: postId,
+                author: currentUser.name,
+                content: content
+            });
+
+            commentInput.value = '';
+        }
+
+        // Update post
+        function updatePost(updatedPost) {
+            const postElement = document.querySelector(`[onclick="likePost('${updatedPost.id}')"]`);
+            if (postElement) {
+                const isLiked = updatedPost.likes.some(like => like.userId === currentUser.id);
+                const likeBtn = postElement;
+                const likeCount = likeBtn.querySelector('span');
+                
+                likeBtn.className = `flex items-center space-x-2 ${isLiked ? 'text-blue-500' : 'text-gray-500'}`;
+                likeCount.textContent = `Like (${updatedPost.likes.length})`;
+
+                const commentBtn = postElement.parentElement.querySelector('[onclick*="focusComment"]');
+                const commentCount = commentBtn.querySelector('span');
+                commentCount.textContent = `Comment (${updatedPost.comments.length})`;
+
+                const commentsContainer = document.getElementById('comments-' + updatedPost.id);
+                if (commentsContainer) {
+                    commentsContainer.innerHTML = updatedPost.comments.map(comment => `
+                        <div class="bg-gray-100 rounded-lg p-3 mb-2">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-semibold text-sm">${comment.author}</span>
+                                <span class="text-xs text-gray-500">${new Date(comment.timestamp).toLocaleTimeString()}</span>
+                            </div>
+                            <p class="text-gray-700 text-sm">${comment.content}</p>
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+
+        // Upload avatar
+        function uploadAvatar() {
+            const fileInput = document.getElementById('avatarUpload');
+            const file = fileInput.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const avatarUrl = e.target.result;
+                    socket.emit('upload_avatar', {
+                        userId: currentUser.id,
+                        avatarUrl: avatarUrl
+                    });
+                    currentUser.avatar = avatarUrl;
+                    updateAvatarImages();
+                    alert('Avatar updated successfully!');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Update avatar images
+        function updateAvatarImages() {
+            document.getElementById('userAvatarImg').src = currentUser.avatar;
+            document.getElementById('profileAvatar').src = currentUser.avatar;
+        }
+
+        // Load admin data
+        function loadAdminData() {
+            fetch('/admin/users')
+                .then(response => response.json())
+                .then(users => {
+                    const table = document.getElementById('usersTable');
+                    table.innerHTML = users.map(user => `
+                        <tr class="border-b">
+                            <td class="p-3">${user.name}</td>
+                            <td class="p-3">${user.email}</td>
+                            <td class="p-3">${user.username}</td>
+                            <td class="p-3">
+                                <span class="${user.isVerified ? 'text-green-500' : 'text-red-500'}">
+                                    ${user.isVerified ? 'Verified' : 'Not Verified'}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('');
+                });
+        }
+
+        // Load sample posts
+        function loadSamplePosts() {
+            const samplePosts = [
+                {
+                    id: '1',
+                    author: 'Linkora Team',
+                    authorId: 'system',
+                    authorUsername: '@linkora',
+                    content: 'Welcome to Linkora! 🎉 Create posts, like, comment and connect with friends in real-time!',
+                    likes: [],
+                    comments: [],
+                    timestamp: new Date()
+                }
+            ];
+            
+            samplePosts.forEach(post => addPostToFeed(post));
+        }
+
+        // Logout
+        function logout() {
+            currentUser = null;
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('authSection').classList.remove('hidden');
+            showLogin();
+            
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+        }
+
+        // Focus comment input
+        function focusComment(postId) {
+            const commentSection = document.getElementById('commentSection-' + postId);
+            commentSection.classList.toggle('hidden');
+        }
+    </script>
+</body>
+  </html>
